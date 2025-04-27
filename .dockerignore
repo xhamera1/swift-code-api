@@ -1,0 +1,43 @@
+# Ignoruj wszystko związane z Gitem
+.git
+.gitignore
+
+# Ignoruj konfigurację IDE
+.idea
+*.iml
+.vscode
+
+# Ignoruj pliki środowiskowe, które nie powinny znaleźć się w obrazie
+.env
+.env.*
+
+# Ignoruj pliki budowania Mavena - Z WYJĄTKIEM folderu target,
+# ponieważ Dockerfile kopiuje z niego plik .jar
+# Jeśli masz pewność, że nic innego z target nie jest potrzebne,
+# możesz to zostawić. Jeśli nie, rozważ dokładniejsze reguły.
+# target/
+
+# Ignoruj kod źródłowy i konfigurację Mavena - niepotrzebne w finalnym obrazie JRE
+src
+pom.xml
+mvnw
+mvnw.cmd
+.mvn
+
+# Ignoruj inne pliki konfiguracyjne Docker/Git
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Ignoruj dokumentację i pliki tymczasowe
+README.md
+*.md
+*.tmp
+*~
+*.swp
+*.log
+logs/
+
+# Ignoruj pliki systemowe
+.DS_Store
+Thumbs.db
