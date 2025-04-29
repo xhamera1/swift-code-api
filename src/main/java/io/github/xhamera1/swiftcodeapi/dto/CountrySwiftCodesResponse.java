@@ -1,6 +1,5 @@
 package io.github.xhamera1.swiftcodeapi.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
 import lombok.Data;
 

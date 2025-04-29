@@ -19,6 +19,17 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
+
+/**
+ * Initializes the application's database with SWIFT code data from a CSV file upon startup.
+ * Implements {@link CommandLineRunner} to execute after the application context is loaded.
+ * <p>
+ * Data initialization only occurs if the {@code swift_codes} table in the database is empty,
+ * preventing data duplication on subsequent application restarts.
+ * Data is loaded from a CSV file specified by {@link #csvFilePath} located in the classpath resources.
+ * Uses Apache Commons CSV for parsing and saves data in batches for performance.
+ * </p>
+ */
 @Component
 public class DataInitializer implements CommandLineRunner {
 
@@ -27,11 +38,25 @@ public class DataInitializer implements CommandLineRunner {
 
     private final String csvFilePath = "data/swift_code_data.csv";
 
+    /**
+     * Constructs the DataInitializer with required dependencies.
+     *
+     * @param swiftCodeInfoRepository The repository used for saving SWIFT code data.
+     */
     @Autowired
     public DataInitializer(SwiftCodeInfoRepository swiftCodeInfoRepository) {
         this.repository = swiftCodeInfoRepository;
     }
 
+
+    /**
+     * Executes the data initialization logic when the application starts.
+     * Checks if the database is empty and triggers the CSV loading process if needed.
+     * This method runs within a database transaction.
+     *
+     * @param args Incoming command line arguments (not used).
+     * @throws Exception if an error occurs during file access or database interaction.
+     */
     @Override
     @Transactional
     public void run(String... args) throws Exception {
@@ -44,6 +69,16 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
+
+    /**
+     * Loads SWIFT code data from the configured CSV file and persists it to the database.
+     * <p>
+     * Reads the CSV file record by record, validates critical fields, maps valid records
+     * to {@link SwiftCodeInfo} entities, and saves them to the database in batches.
+     * Logs progress, skipped records due to missing data or errors, and a final summary.
+     * Handles potential I/O errors during file reading and parsing errors.
+     * </p>
+     */
     private void loadDataFromCsv() {
         List<SwiftCodeInfo> swiftCodeInfoListBatch = new ArrayList<>();
         Resource resource = new ClassPathResource(csvFilePath);

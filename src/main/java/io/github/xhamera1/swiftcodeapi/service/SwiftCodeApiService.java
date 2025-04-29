@@ -19,17 +19,39 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Service layer containing the core business logic for managing SWIFT code data.
+ * Interacts with the {@link SwiftCodeInfoRepository} for data persistence and
+ * handles mapping between {@link SwiftCodeInfo} entities and various DTOs
+ * ({@link SwiftCodeRequest}, {@link SwiftCodeResponse}, {@link CountrySwiftCodesResponse}, {@link MessageResponse}).
+ * Uses declarative transaction management via {@link Transactional}.
+ */
 @Service
 public class SwiftCodeApiService {
 
     Logger log = LoggerFactory.getLogger(SwiftCodeApiService.class);
     private final SwiftCodeInfoRepository repository;
 
+    /**
+     * Constructs the service and injects the required repository dependency.
+     * @param repository The repository for SWIFT code data access.
+     */
     @Autowired
     public SwiftCodeApiService(SwiftCodeInfoRepository repository) {
         this.repository = repository;
     }
 
+
+    /**
+     * Retrieves detailed information for a single SWIFT code.
+     * If the code represents a headquarters (ends in "XXX"), it also fetches and includes
+     * details of associated branch codes (codes starting with the same first 8 characters).
+     * The search ignores case for the provided swiftCode.
+     *
+     * @param swiftCode The 8 or 11 character SWIFT/BIC code to retrieve details for.
+     * @return A {@link SwiftCodeResponse} containing the details. Includes a list of branches if the code is a headquarters.
+     * @throws ResourceNotFoundException if no SWIFT code matching the provided {@code swiftCode} (case-insensitive) is found.
+     */
     @Transactional(readOnly = true)
     public SwiftCodeResponse getSwiftCodeDetails(String swiftCode) {
         log.debug("Attempting to retrieve details for SWIFT code: {}", swiftCode);
@@ -64,6 +86,16 @@ public class SwiftCodeApiService {
         }
     }
 
+
+    /**
+     * Retrieves all SWIFT codes (both headquarters and branches) associated with a specific country.
+     * The country is identified by its ISO 3166-1 alpha-2 code (case-insensitive).
+     *
+     * @param countryISO2 The 2-letter ISO country code (case is ignored). Cannot be null.
+     * @return A {@link CountrySwiftCodesResponse} containing the country details (ISO code and name derived from the first found entry)
+     * and a list of {@link SwiftCodeResponse} objects for all codes in that country. Returns an empty list if no codes are found.
+     * @throws IllegalArgumentException if the provided {@code countryISO2} is null.
+     */
     @Transactional(readOnly = true)
     public CountrySwiftCodesResponse getSwiftCodesByCountry(String countryISO2) {
         String processedCountryISO2 = Optional.ofNullable(countryISO2)
@@ -97,6 +129,20 @@ public class SwiftCodeApiService {
                 .build();
     }
 
+
+    /**
+     * Adds a new SWIFT code entry based on the provided request data.
+     * Performs several validations:
+     * - Checks if a SWIFT code with the same value (case-insensitive) already exists.
+     * - Validates consistency between the country code embedded in the SWIFT code (chars 5-6) and the provided countryISO2 field.
+     * - Validates consistency between the provided {@code isHeadquarter} flag and the SWIFT code format (ending in "XXX").
+     * Converts relevant fields (swiftCode, countryISO2, countryName) to uppercase before saving.
+     *
+     * @param requestDto The DTO containing the details of the SWIFT code to add. Must pass bean validation defined on {@link SwiftCodeRequest}.
+     * @return A {@link MessageResponse} indicating successful addition.
+     * @throws ResourceAlreadyExistsException if the SWIFT code already exists.
+     * @throws InconsistentSwiftDataException if the provided data is internally inconsistent (country code mismatch or isHeadquarter flag mismatch).
+     */
     @Transactional
     public MessageResponse addSwiftCode(SwiftCodeRequest requestDto) {
         String swiftCode = requestDto.getSwiftCode().trim().toUpperCase();
@@ -109,6 +155,17 @@ public class SwiftCodeApiService {
             log.warn("Attempted to add duplicate SWIFT code: {}", swiftCode);
             throw new ResourceAlreadyExistsException("SWIFT code '" + swiftCode + "' already exists.");
         }
+
+        String embeddedCountryCode = swiftCode.substring(4, 6);
+        if (!embeddedCountryCode.equals(countryIso2)) {
+            String errorMessage = String.format(
+                    "Data consistency error: The country code from SWIFT ('%s' in '%s') does not match the provided Country ISO2 ('%s').",
+                    embeddedCountryCode, swiftCode, countryIso2
+            );
+            log.warn("InconsistentSwiftDataException: {}", errorMessage);
+            throw new InconsistentSwiftDataException(errorMessage);
+        }
+
 
         boolean isHqAccordingToCode = swiftCode.endsWith("XXX");
         if (requestDto.getIsHeadquarter() != isHqAccordingToCode) {
@@ -133,6 +190,15 @@ public class SwiftCodeApiService {
         return new MessageResponse("SWIFT code '" + swiftCode + "' added successfully.");
     }
 
+
+    /**
+     * Deletes a SWIFT code entry identified by its code.
+     * The search for the code to delete ignores case.
+     *
+     * @param swiftCode The 8 or 11 character SWIFT/BIC code to delete.
+     * @return A {@link MessageResponse} indicating successful deletion.
+     * @throws ResourceNotFoundException if no SWIFT code matching the provided {@code swiftCode} (case-insensitive) is found.
+     */
     @Transactional
     public MessageResponse deleteSwiftCode(String swiftCode) {
         String processedSwiftCode = swiftCode.trim().toUpperCase();
@@ -151,6 +217,15 @@ public class SwiftCodeApiService {
     }
 
 
+    /**
+     * Maps a {@link SwiftCodeInfo} entity to a {@link SwiftCodeResponse} DTO.
+     * Constructs the address string by prioritizing the {@code address} field over the {@code townName} field.
+     * Optionally includes the country name in the resulting DTO.
+     *
+     * @param entity The source {@link SwiftCodeInfo} entity.
+     * @param includeCountryName If {@code true}, the {@code countryName} from the entity will be included in the DTO; otherwise, it will be null.
+     * @return The mapped {@link SwiftCodeResponse} DTO.
+     */
     private SwiftCodeResponse mapEntityToDto(SwiftCodeInfo entity, boolean includeCountryName) {
         String finalAddressString;
         String dbAddress = entity.getAddress();
