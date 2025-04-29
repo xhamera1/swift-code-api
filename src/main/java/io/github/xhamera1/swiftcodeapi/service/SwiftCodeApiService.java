@@ -4,6 +4,7 @@ import io.github.xhamera1.swiftcodeapi.dto.CountrySwiftCodesResponse;
 import io.github.xhamera1.swiftcodeapi.dto.MessageResponse;
 import io.github.xhamera1.swiftcodeapi.dto.SwiftCodeRequest;
 import io.github.xhamera1.swiftcodeapi.dto.SwiftCodeResponse;
+import io.github.xhamera1.swiftcodeapi.exceptions.InconsistentSwiftDataException;
 import io.github.xhamera1.swiftcodeapi.exceptions.ResourceAlreadyExistsException;
 import io.github.xhamera1.swiftcodeapi.exceptions.ResourceNotFoundException;
 import io.github.xhamera1.swiftcodeapi.model.SwiftCodeInfo;
@@ -113,7 +114,7 @@ public class SwiftCodeApiService {
         if (requestDto.getIsHeadquarter() != isHqAccordingToCode) {
             log.warn("Inconsistent isHeadquarter flag for SWIFT code {}. Flag was: {}, expected based on code: {}",
                     swiftCode, requestDto.getIsHeadquarter(), isHqAccordingToCode);
-            throw new IllegalArgumentException("Provided 'isHeadquarter' flag (" + requestDto.getIsHeadquarter()
+            throw new InconsistentSwiftDataException("Provided 'isHeadquarter' flag (" + requestDto.getIsHeadquarter()
                     + ") is inconsistent with the SWIFT code format (" + swiftCode + ").");
         }
 

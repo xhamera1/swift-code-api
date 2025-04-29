@@ -15,6 +15,14 @@ services:
       - swift-network
     ports:
       - "3307:3306"
+    healthcheck:
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+
 
   app:
     container_name: spring_app_swift
@@ -26,7 +34,8 @@ services:
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - swift-network
 

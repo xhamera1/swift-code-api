@@ -9,8 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
+
 
 import java.util.stream.Collectors;
 
@@ -55,6 +54,19 @@ public class GlobalExceptionHandler {
         log.warn("Handling ResourceAlreadyExistsException: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error); // 409
     }
+
+
+    /**
+     * Handles custom InconsistentSwiftDataException thrown from service layer
+     * when input data has logical inconsistencies (e.g., isHeadquarter flag mismatch).
+     */
+    @ExceptionHandler(InconsistentSwiftDataException.class)
+    public ResponseEntity<ErrorResponse> handleInconsistentSwiftDataException(InconsistentSwiftDataException ex) {
+        ErrorResponse error = new ErrorResponse(ex.getMessage());
+        log.warn("Handling InconsistentSwiftDataException: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error); // 400
+    }
+
 
     /**
      * Handles validation exceptions triggered by @Valid on @RequestBody.
