@@ -78,9 +78,8 @@ public class DataInitializer implements CommandLineRunner {
                     if (swiftCode == null || swiftCode.trim().isEmpty() ||
                             countryIso2 == null || countryIso2.trim().isEmpty() ||
                             bankName == null || bankName.trim().isEmpty() ||
-                            countryName == null || countryName.trim().isEmpty() ||
-                            townName == null || townName.trim().isEmpty()) {
-                        log.warn("Skipping record {} due to missing critical data (SWIFT, ISO2, BankName, CountryName, or TownName).", record.getRecordNumber());
+                            countryName == null || countryName.trim().isEmpty()) {
+                        log.warn("Skipping record {} due to missing critical data (SWIFT, ISO2, BankName or CountryName).", record.getRecordNumber());
                         errorCount++;
                         continue;
                     }
@@ -88,7 +87,7 @@ public class DataInitializer implements CommandLineRunner {
                     swiftCodeInfo.setSwiftCode(swiftCode.trim());
                     swiftCodeInfo.setBankName(bankName);
                     swiftCodeInfo.setAddress( (address != null && !address.trim().isEmpty()) ? address : null );
-                    swiftCodeInfo.setTownName(townName);
+                    swiftCodeInfo.setTownName( (townName != null && !townName.trim().isEmpty()) ? townName : null );
 
                     swiftCodeInfo.setCountryISO2(countryIso2.toUpperCase());
                     swiftCodeInfo.setCountryName(countryName.toUpperCase());
