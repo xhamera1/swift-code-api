@@ -15,5 +15,5 @@ public class CountrySwiftCodesResponse {
 
     private String countryISO2;
     private String countryName;
-    private List<SwiftCodeResponse> swiftCodeResponses;
+    private List<SwiftCodeResponse> swiftCodes;
 }

@@ -24,7 +24,7 @@ public class SwiftCodeInfo {
     @Column(name = "address", length = 512, nullable = true)
     private String address;
 
-    @Column(name = "town_name", nullable = false) // I assume town name cannot be null
+    @Column(name = "town_name", nullable = true)
     private String townName;
 
     @Column(name = "country_iso2", length = 2, nullable = false) // I assume that country ISO2 code cannot be null
