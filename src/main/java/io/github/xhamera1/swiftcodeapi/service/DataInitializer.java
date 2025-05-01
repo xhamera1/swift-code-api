@@ -80,10 +80,9 @@ public class DataInitializer implements CommandLineRunner {
      * </p>
      */
     private void loadDataFromCsv() {
-        List<SwiftCodeInfo> swiftCodeInfoListBatch = new ArrayList<>();
-        Resource resource = new ClassPathResource(csvFilePath);
-
-        int batchSize = 1000; //saving data in batches can improve performance
+        final int BATCH_SIZE = 1000;
+        List<SwiftCodeInfo> swiftCodeInfoListBatch = new ArrayList<>(BATCH_SIZE);
+        Resource resource = new ClassPathResource(this.csvFilePath);
 
         CSVFormat csvFormat = CSVFormat.DEFAULT.builder()
                 .setHeader("COUNTRY ISO2 CODE", "SWIFT CODE", "CODE TYPE", "NAME", "ADDRESS", "TOWN NAME", "COUNTRY NAME", "TIME ZONE")
@@ -92,8 +91,9 @@ public class DataInitializer implements CommandLineRunner {
                 .setTrim(true)
                 .build();
 
-        log.info("Starting CSV parsing from {}", csvFilePath);
+        log.info("Starting SWIFT code data initialization from CSV: {}", this.csvFilePath);
         long recordCount = 0;
+        long successfullyMappedCount = 0;
         long errorCount = 0;
 
         try(Reader reader = new InputStreamReader(resource.getInputStream());
@@ -102,7 +102,6 @@ public class DataInitializer implements CommandLineRunner {
             for (CSVRecord record : csvParser) {
                 recordCount++;
                 try {
-                    SwiftCodeInfo swiftCodeInfo = new SwiftCodeInfo();
                     String swiftCode = record.get("SWIFT CODE");
                     String countryIso2 = record.get("COUNTRY ISO2 CODE");
                     String countryName = record.get("COUNTRY NAME");
@@ -110,30 +109,47 @@ public class DataInitializer implements CommandLineRunner {
                     String address = record.get("ADDRESS");
                     String townName = record.get("TOWN NAME");
 
-                    if (swiftCode == null || swiftCode.trim().isEmpty() ||
-                            countryIso2 == null || countryIso2.trim().isEmpty() ||
-                            bankName == null || bankName.trim().isEmpty() ||
-                            countryName == null || countryName.trim().isEmpty()) {
-                        log.warn("Skipping record {} due to missing critical data (SWIFT, ISO2, BankName or CountryName).", record.getRecordNumber());
+
+                    if (swiftCode == null || swiftCode.isEmpty() ||
+                            countryIso2 == null || countryIso2.isEmpty() ||
+                            bankName == null || bankName.isEmpty() ||
+                            countryName == null || countryName.isEmpty()) {
+                        log.warn("Record {}: Skipping due to missing critical data (SWIFT, ISO2, BankName, or CountryName).", record.getRecordNumber());
                         errorCount++;
                         continue;
                     }
 
-                    swiftCodeInfo.setSwiftCode(swiftCode.trim());
-                    swiftCodeInfo.setBankName(bankName);
-                    swiftCodeInfo.setAddress( (address != null && !address.trim().isEmpty()) ? address : null );
-                    swiftCodeInfo.setTownName( (townName != null && !townName.trim().isEmpty()) ? townName : null );
+                    if (!(swiftCode.length() == 8 || swiftCode.length() == 11)) {
+                        log.warn("Record {}: Invalid SWIFT code length ('{}'). Expected 8 or 11 characters. Skipping record.",
+                                record.getRecordNumber(), swiftCode);
+                        errorCount++;
+                        continue;
+                    }
 
+                    String embeddedCountryCode = swiftCode.substring(4, 6);
+                    if (!embeddedCountryCode.equalsIgnoreCase(countryIso2)) {
+                        log.warn("Record {}: SWIFT code country part ('{}') does not match provided Country ISO2 ('{}'). Skipping record.",
+                                record.getRecordNumber(), embeddedCountryCode, countryIso2);
+                        errorCount++;
+                        continue;
+                    }
+
+                    SwiftCodeInfo swiftCodeInfo = new SwiftCodeInfo();
+
+                    swiftCodeInfo.setSwiftCode(swiftCode);
+                    swiftCodeInfo.setBankName(bankName);
+                    swiftCodeInfo.setAddress((address != null && !address.isEmpty()) ? address : null);
+                    swiftCodeInfo.setTownName((townName != null && !townName.isEmpty()) ? townName : null);
                     swiftCodeInfo.setCountryISO2(countryIso2.toUpperCase());
                     swiftCodeInfo.setCountryName(countryName.toUpperCase());
-
-                    swiftCodeInfo.setHeadquarter(swiftCode.trim().endsWith("XXX"));
+                    swiftCodeInfo.setHeadquarter(swiftCode.endsWith("XXX"));
 
                     swiftCodeInfoListBatch.add(swiftCodeInfo);
+                    successfullyMappedCount++;
 
-                    if (swiftCodeInfoListBatch.size() >= batchSize) {
+                    if (swiftCodeInfoListBatch.size() >= BATCH_SIZE) {
                         repository.saveAll(swiftCodeInfoListBatch);
-                        log.info("Saved batch of {} records.", swiftCodeInfoListBatch.size());
+                        log.debug("Saved batch of {} records.", swiftCodeInfoListBatch.size());
                         swiftCodeInfoListBatch.clear();
                     }
                 } catch (IllegalArgumentException e) {

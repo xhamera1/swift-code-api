@@ -5,7 +5,10 @@ import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -91,6 +94,28 @@ public class GlobalExceptionHandler {
         log.error("An unexpected error occurred processing the request", ex);
         ErrorResponse error = new ErrorResponse("An internal server error occurred. Please try again later.");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error); // 500
+    }
+
+    /**
+     * Handles exceptions when the request body is missing or cannot be parsed
+     * (e.g., malformed JSON, empty body for required object).
+     */
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleMessageNotReadable(HttpMessageNotReadableException ex) {
+        log.warn("Handling HttpMessageNotReadableException: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("Request body is missing or malformed.");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);   // 400
+    }
+
+    /**
+     * Handles exceptions when the client sends a request with an unsupported Content-Type.
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+        log.warn("Handling HttpMediaTypeNotSupportedException: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("Unsupported Media Type.");
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(error); // 415
     }
 
 
