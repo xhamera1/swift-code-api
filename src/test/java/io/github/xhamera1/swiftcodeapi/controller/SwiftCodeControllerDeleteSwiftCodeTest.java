@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
@@ -130,27 +131,29 @@ class SwiftCodeControllerDeleteSwiftCodeTest {
     }
 
     @Test
-    @DisplayName("DELETE /v1/swift-codes-wrong/{code} - Should return 500 for completely wrong path due to test env/handler interaction")
-    void deleteSwiftCode_whenBasePathIsWrong_shouldReturnInternalServerError() throws Exception {
+    @DisplayName("DELETE /v1/swift-codes-wrong/{code} - Should return 404 Not Found for wrong base path")
+    void deleteSwiftCode_whenBasePathIsWrong_shouldReturnNotFound() throws Exception {
         String swiftCode = "AAISALTRXXX";
-        ResultActions response = mockMvc.perform(delete("/v1/swift-codes-wrong/{swift-code}", swiftCode)
-                .contentType(MediaType.APPLICATION_JSON));
-        response.andExpect(status().isInternalServerError())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.message", is("An internal server error occurred. Please try again later.")));
+        String expectedPath = "/v1/swift-codes-wrong/" + swiftCode;
 
+        ResultActions response = mockMvc.perform(delete(expectedPath)
+                .contentType(MediaType.APPLICATION_JSON));
+
+        response.andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message", containsString("The requested resource path '" + expectedPath + "' could not be found")));
         verify(swiftCodeApiService, never()).deleteSwiftCode(anyString());
     }
 
     @Test
-    @DisplayName("DELETE /v1/swift-codes/ - Should return 500 when path variable is missing (due to test env/handler interaction)")
-    void deleteSwiftCode_whenPathVariableIsMissing_shouldReturnInternalServerError() throws Exception {
-        ResultActions response = mockMvc.perform(delete("/v1/swift-codes/")
+    @DisplayName("DELETE /v1/swift-codes/ - Should return 404 Not Found when path variable is missing")
+    void deleteSwiftCode_whenPathVariableIsMissing_shouldReturnNotFound() throws Exception {
+        String expectedPath = "/v1/swift-codes/";
+        ResultActions response = mockMvc.perform(delete(expectedPath)
                 .contentType(MediaType.APPLICATION_JSON));
-
-        response.andExpect(status().isInternalServerError())
+        response.andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.message", is("An internal server error occurred. Please try again later.")));
+                .andExpect(jsonPath("$.message", containsString("The requested resource path '" + expectedPath + "' could not be found")));
 
         verify(swiftCodeApiService, never()).deleteSwiftCode(anyString());
     }

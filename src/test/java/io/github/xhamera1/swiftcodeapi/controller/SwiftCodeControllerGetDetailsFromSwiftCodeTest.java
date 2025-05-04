@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import java.util.Collections;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
@@ -193,18 +194,18 @@ class SwiftCodeControllerGetDetailsFromSwiftCodeTest {
     }
 
     @Test
-    @DisplayName("GET /v1/swift-codes/co/{code} - Should return 500 for completely wrong path due to test env/handler interaction")
-    void getDetailsForCountry_whenBasePathIsWrong_shouldReturnInternalServerError() throws Exception {
-        String countryCode = "PL";
-
-        ResultActions response = mockMvc.perform(get("/v1/swift-codes/co/{countryISO2code}", countryCode)
+    @DisplayName("GET /v1/swift-codes/co/{code} - Should return 404 Not Found for wrong base path when getting details by SWIFT code")
+    void getDetailsFromSwiftCode_whenBasePathIsWrong_shouldReturnNotFound() throws Exception {
+        String swiftCode = "ANYCODE";
+        String expectedPath = "/v1/swift-codes/co/" + swiftCode;
+        ResultActions response = mockMvc.perform(get(expectedPath)
                 .contentType(MediaType.APPLICATION_JSON));
 
-        response.andExpect(status().isInternalServerError())
+        response.andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.message", is("An internal server error occurred. Please try again later.")));
+                .andExpect(jsonPath("$.message", containsString("The requested resource path '" + expectedPath + "' could not be found")));
 
-
+        verify(swiftCodeApiService, never()).getSwiftCodeDetails(anyString());
         verify(swiftCodeApiService, never()).getSwiftCodesByCountry(anyString());
     }
 }

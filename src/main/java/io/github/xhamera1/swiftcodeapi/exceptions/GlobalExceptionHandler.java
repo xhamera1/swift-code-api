@@ -12,6 +12,7 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 
 import java.util.stream.Collectors;
@@ -85,16 +86,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error); // Status 400 Bad Request
     }
 
-    /**
-     * Catch-all handler for any other unexpected exceptions.
-     * Logs the full error stack trace for debugging and returns a generic 500 error to the client.
-     */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
-        log.error("An unexpected error occurred processing the request", ex);
-        ErrorResponse error = new ErrorResponse("An internal server error occurred. Please try again later.");
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error); // 500
-    }
+
 
     /**
      * Handles exceptions when the request body is missing or cannot be parsed
@@ -118,6 +110,30 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(error); // 415
     }
 
+    /**
+     * Handles NoHandlerFoundException which occurs when the DispatcherServlet
+     * cannot find a handler for a request path (e.g., incorrect URL).
+     * Returns 404 Not Found.
+     * Requires 'spring.mvc.throw-exception-if-no-handler-found=true' in application.properties.
+     */
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoHandlerFoundException(NoHandlerFoundException ex) {
+        log.warn("Handling NoHandlerFoundException: No handler found for {} {}", ex.getHttpMethod(), ex.getRequestURL());
+        ErrorResponse error = new ErrorResponse("The requested resource path '" + ex.getRequestURL() + "' could not be found on this server.");
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+
+    /**
+     * Catch-all handler for any other unexpected exceptions.
+     * Logs the full error stack trace for debugging and returns a generic 500 error to the client.
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        log.error("An unexpected error occurred processing the request", ex);
+        ErrorResponse error = new ErrorResponse("An internal server error occurred. Please try again later.");
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error); // 500
+    }
 
 
 }

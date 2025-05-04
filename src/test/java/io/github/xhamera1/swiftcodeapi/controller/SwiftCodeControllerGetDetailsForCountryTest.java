@@ -156,18 +156,16 @@ class SwiftCodeControllerGetDetailsForCountryTest {
     }
 
     @Test
-    @DisplayName("GET /v1/swift-codes/co/{code} - Should return 500 for completely wrong path due to test env/handler interaction")
-    void getDetailsForCountry_whenBasePathIsWrong_shouldReturnInternalServerError() throws Exception {
+    @DisplayName("GET /v1/swift-codes/co/{code} - Should return 404 Not Found for wrong base path")
+    void getDetailsForCountry_whenBasePathIsWrong_shouldReturnNotFound() throws Exception {
         String countryCode = "PL";
-
-        ResultActions response = mockMvc.perform(get("/v1/swift-codes/co/{countryISO2code}", countryCode)
+        String expectedPath = "/v1/swift-codes/co/" + countryCode;
+        ResultActions response = mockMvc.perform(get(expectedPath)
                 .contentType(MediaType.APPLICATION_JSON));
 
-        response.andExpect(status().isInternalServerError())
+        response.andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.message", is("An internal server error occurred. Please try again later.")));
-
-
+                .andExpect(jsonPath("$.message", containsString("The requested resource path '" + expectedPath + "' could not be found")));
         verify(swiftCodeApiService, never()).getSwiftCodesByCountry(anyString());
     }
 
@@ -192,14 +190,16 @@ class SwiftCodeControllerGetDetailsForCountryTest {
     }
 
     @Test
-    @DisplayName("GET /v1/swift-codes/country/ - Should return 500 when path variable is missing due to test env/handler interaction")
-    void getDetailsForCountry_whenPathVariableIsMissing_shouldReturnInternalServerError() throws Exception {
-        ResultActions response = mockMvc.perform(get("/v1/swift-codes/country/")
+    @DisplayName("GET /v1/swift-codes/country/ - Should return 404 Not Found when path variable is missing")
+    void getDetailsForCountry_whenPathVariableIsMissing_shouldReturnNotFound() throws Exception {
+        String expectedPath = "/v1/swift-codes/country/";
+
+        ResultActions response = mockMvc.perform(get(expectedPath)
                 .contentType(MediaType.APPLICATION_JSON));
 
-        response.andExpect(status().isInternalServerError())
+        response.andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.message", is("An internal server error occurred. Please try again later.")));
+                .andExpect(jsonPath("$.message", containsString("The requested resource path '" + expectedPath + "' could not be found")));
 
         verify(swiftCodeApiService, never()).getSwiftCodesByCountry(anyString());
     }
